@@ -1,51 +1,35 @@
 services:
-  - type: pserv
-    name: market-vision-api
-    runtime: docker
-    plan: 2c-8g
-    region: frankfurt
-    dockerfilePath: ./Dockerfile.vision
-    dockerContext: .
-    disk:
-      name: vision-model-cache
-      mountPath: /var/data
-      sizeGB: 20
-    envVars:
-      - key: PORT
-        value: "10000"
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_VISION_MODEL
-        sync: false
-      - key: OMP_NUM_THREADS
-        value: "2"
   - type: web
-    name: market-ai
-    runtime: docker
-    plan: 2c-4g
+    name: market-vision-free
+    runtime: python
+    plan: free
     region: frankfurt
-    dockerfilePath: ./Dockerfile.market
-    dockerContext: .
-    healthCheckPath: /_stcore/health
+    buildCommand: pip install -r free_demo/requirements-backend.txt
+    startCommand: uvicorn free_demo.backend:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: "10000"
-      - key: VISION_PIPELINE_TIMEOUT
-        value: "600"
-      - key: VISION_PIPELINE_HOSTPORT
-        fromService:
-          name: market-vision-api
-          type: pserv
-          property: hostport
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_PRIMARY_API_KEY
-        sync: false
-      - key: GROQ_SECONDARY_API_KEY
         sync: false
       - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b
+      - key: SERVICE_TOKEN
         sync: false
-      - key: LLM_PROVIDER
-        value: groq_primary
+  - type: web
+    name: market-ai-free
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r free_demo/requirements-frontend.txt
+    startCommand: streamlit run free_demo/frontend.py --server.address 0.0.0.0 --server.port $PORT --server.headless true --browser.gatherUsageStats false
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: BACKEND_URL
+        sync: false
+      - key: SERVICE_TOKEN
+        sync: false
       - key: APP_PASSWORD
         sync: false
