@@ -1,0 +1,51 @@
+services:
+  - type: pserv
+    name: market-vision-api
+    runtime: docker
+    plan: 2c-8g
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.vision
+    dockerContext: .
+    disk:
+      name: vision-model-cache
+      mountPath: /var/data
+      sizeGB: 20
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_VISION_MODEL
+        sync: false
+      - key: OMP_NUM_THREADS
+        value: "2"
+  - type: web
+    name: market-ai
+    runtime: docker
+    plan: 2c-4g
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.market
+    dockerContext: .
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: VISION_PIPELINE_TIMEOUT
+        value: "600"
+      - key: VISION_PIPELINE_HOSTPORT
+        fromService:
+          name: market-vision-api
+          type: pserv
+          property: hostport
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_PRIMARY_API_KEY
+        sync: false
+      - key: GROQ_SECONDARY_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq_primary
+      - key: APP_PASSWORD
+        sync: false
